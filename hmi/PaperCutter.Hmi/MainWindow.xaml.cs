@@ -1,4 +1,5 @@
 using System.Windows;
+using PaperCutter.Hmi.ViewModels;
 
 namespace PaperCutter.Hmi
 {
@@ -7,6 +8,7 @@ namespace PaperCutter.Hmi
         public MainWindow()
         {
             InitializeComponent();
+            DataContext = new MainViewModel();
         }
     }
 }

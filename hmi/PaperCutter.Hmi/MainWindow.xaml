@@ -1,8 +1,435 @@
 <Window x:Class="PaperCutter.Hmi.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Virtual Multi-Axis Paper Cutter HMI" Height="700" Width="1000">
-    <Grid>
-        <TextBlock Text="Virtual Paper Cutter HMI" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="20"/>
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:PaperCutter.Hmi.ViewModels"
+        mc:Ignorable="d"
+        Title="Virtual Multi-Axis Paper Cutter Controller &amp; HMI" 
+        Height="850" Width="1200" MinHeight="750" MinWidth="1050"
+        Background="#18191E" Foreground="#E0E0E0"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisConverter" />
+
+        <!-- Sensor Lamp Style -->
+        <Style x:Key="IndicatorDot" TargetType="Ellipse">
+            <Setter Property="Width" Value="16"/>
+            <Setter Property="Height" Value="16"/>
+            <Setter Property="Fill" Value="#333A42"/>
+            <Setter Property="Stroke" Value="#555E6B"/>
+            <Setter Property="StrokeThickness" Value="1.5"/>
+            <Setter Property="Margin" Value="0,0,10,0"/>
+        </Style>
+
+        <!-- Card Container Style -->
+        <Style x:Key="PanelCard" TargetType="Border">
+            <Setter Property="Background" Value="#22252B"/>
+            <Setter Property="BorderBrush" Value="#313640"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="Margin" Value="4"/>
+        </Style>
+
+        <Style x:Key="HeaderLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#00E5FF"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+
+        <Style x:Key="ActionBtn" TargetType="Button">
+            <Setter Property="Background" Value="#2D333B"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="BorderBrush" Value="#444C56"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Top Bar / Status -->
+            <RowDefinition Height="Auto"/> <!-- Comm Bar -->
+            <RowDefinition Height="*"/>    <!-- Main Dashboard -->
+            <RowDefinition Height="180"/>  <!-- Event Log -->
+        </Grid.RowDefinitions>
+
+        <!-- ROW 0: Header & High-Level State Status -->
+        <Grid Grid.Row="0" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="VIRTUAL MULTI-AXIS PAPER CUTTER HMI" 
+                           FontSize="20" FontWeight="Black" Foreground="#FFFFFF"/>
+                <TextBlock Text="Industrial Multi-Axis Control Simulation (C++17 Firmware / .NET 8 WPF)" 
+                           FontSize="12" Foreground="#8B949E" Margin="0,2,0,0"/>
+            </StackPanel>
+
+            <!-- State Machine Status Pill -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Border Background="{Binding StateColor}" CornerRadius="16" Padding="18,6" Margin="0,0,12,0">
+                    <TextBlock Text="{Binding StateText}" FontWeight="Bold" FontSize="14" Foreground="#000000" HorizontalAlignment="Center"/>
+                </Border>
+                <Border Background="#442222" BorderBrush="#FF4444" BorderThickness="1" CornerRadius="4" Padding="12,6"
+                        Visibility="{Binding IsFaultActive, Converter={StaticResource BoolToVisConverter}}">
+                    <TextBlock Text="{Binding FaultText}" FontWeight="Bold" FontSize="12" Foreground="#FF6B6B"/>
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <!-- ROW 1: Connection & Link Health Bar -->
+        <Border Grid.Row="1" Style="{StaticResource PanelCard}" Margin="0,0,0,8" Padding="8,6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Port Selector -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
+                    <TextBlock Text="Interface:" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="#8B949E"/>
+                    <CheckBox Content="Use TCP" IsChecked="{Binding UseTcp}" VerticalAlignment="Center" Margin="0,0,12,0" Foreground="#E0E0E0"/>
+
+                    <!-- Serial COM settings -->
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding UseSerial, Converter={StaticResource BoolToVisConverter}}">
+                        <TextBlock Text="Port:" VerticalAlignment="Center" Margin="0,0,4,0" Foreground="#8B949E"/>
+                        <ComboBox ItemsSource="{Binding AvailablePorts}" SelectedItem="{Binding SelectedPort}" Width="90" Height="26" Margin="0,0,6,0"/>
+                        <Button Content="⟳" Command="{Binding RefreshPortsCommand}" ToolTip="Refresh Ports" Width="26" Height="26" Style="{StaticResource ActionBtn}" Padding="0"/>
+                    </StackPanel>
+
+                    <!-- TCP Host & Port -->
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding UseTcp, Converter={StaticResource BoolToVisConverter}}">
+                        <TextBlock Text="Host:" VerticalAlignment="Center" Margin="0,0,4,0" Foreground="#8B949E"/>
+                        <TextBox Text="{Binding TcpHost}" Width="90" Height="24" Margin="0,0,8,0" Background="#18191E" Foreground="#FFF" BorderBrush="#444"/>
+                        <TextBlock Text="Port:" VerticalAlignment="Center" Margin="0,0,4,0" Foreground="#8B949E"/>
+                        <TextBox Text="{Binding TcpPort}" Width="55" Height="24" Margin="0,0,8,0" Background="#18191E" Foreground="#FFF" BorderBrush="#444"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Connect / Disconnect Buttons -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,20,0">
+                    <Button Content="Connect" Command="{Binding ConnectCommand}" IsEnabled="{Binding IsDisconnected}" 
+                            Style="{StaticResource ActionBtn}" Background="#238636" BorderBrush="#2EA043"/>
+                    <Button Content="Disconnect" Command="{Binding DisconnectCommand}" IsEnabled="{Binding IsConnected}" 
+                            Style="{StaticResource ActionBtn}" Background="#DA3633" BorderBrush="#F85149"/>
+                </StackPanel>
+
+                <!-- Connection Status Readout -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,20,0">
+                    <TextBlock Text="Link: " Foreground="#8B949E"/>
+                    <TextBlock Text="{Binding ConnectionStatus}" FontWeight="SemiBold" Foreground="#58A6FF"/>
+                </StackPanel>
+
+                <!-- Comm Diagnostics (CRC, Dropped, Timeouts) -->
+                <StackPanel Grid.Column="6" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="CRC Errors: " Foreground="#8B949E"/>
+                    <TextBlock Text="{Binding CrcErrors}" FontWeight="Bold" Foreground="#F0883E" Margin="0,0,14,0"/>
+                    <TextBlock Text="Dropped Pkts: " Foreground="#8B949E"/>
+                    <TextBlock Text="{Binding DroppedPackets}" FontWeight="Bold" Foreground="#F0883E" Margin="0,0,14,0"/>
+                    <TextBlock Text="Timeouts: " Foreground="#8B949E"/>
+                    <TextBlock Text="{Binding TimeoutErrors}" FontWeight="Bold" Foreground="#F0883E"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ROW 2: Main Dashboard Grid -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="340"/> <!-- Left: Axis Telemetry & Limit Sensors -->
+                <ColumnDefinition Width="*"/>   <!-- Center: Job Recipe & Live Execution -->
+                <ColumnDefinition Width="300"/> <!-- Right: Operator Controls & Big E-Stop -->
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT COLUMN: Axis Telemetry & Hardware Sensors -->
+            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Margin="0,0,6,0">
+                <StackPanel Orientation="Vertical">
+                    
+                    <!-- Back-Gauge Axis -->
+                    <Border Style="{StaticResource PanelCard}">
+                        <StackPanel Orientation="Vertical">
+                            <TextBlock Text="BACK-GAUGE AXIS (LINEAR FEED)" Style="{StaticResource HeaderLabel}"/>
+                            
+                            <Grid Margin="0,0,0,6">
+                                <TextBlock Text="Position:" Foreground="#8B949E" FontSize="12"/>
+                                <TextBlock Text="{Binding BackGaugePosMm, StringFormat='{}{0:F2} mm'}" 
+                                           HorizontalAlignment="Right" FontSize="20" FontWeight="Bold" Foreground="#79C0FF" FontFamily="Consolas"/>
+                            </Grid>
+                            
+                            <ProgressBar Value="{Binding BackGaugePosMm}" Minimum="0" Maximum="1000" Height="14" 
+                                         Background="#161B22" Foreground="#1F6FEB" BorderBrush="#30363D"/>
+                            <Grid Margin="0,2,0,0">
+                                <TextBlock Text="0 mm" FontSize="10" Foreground="#6E7681"/>
+                                <TextBlock Text="1000 mm" FontSize="10" Foreground="#6E7681" HorizontalAlignment="Right"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Blade Knife Axis -->
+                    <Border Style="{StaticResource PanelCard}">
+                        <StackPanel Orientation="Vertical">
+                            <TextBlock Text="BLADE KNIFE AXIS" Style="{StaticResource HeaderLabel}"/>
+                            
+                            <Grid Margin="0,0,0,6">
+                                <TextBlock Text="Vertical Stroke:" Foreground="#8B949E" FontSize="12"/>
+                                <TextBlock Text="{Binding BladePosMm, StringFormat='{}{0:F2} mm'}" 
+                                           HorizontalAlignment="Right" FontSize="20" FontWeight="Bold" Foreground="#FFA657" FontFamily="Consolas"/>
+                            </Grid>
+                            
+                            <ProgressBar Value="{Binding BladePosMm}" Minimum="0" Maximum="50" Height="14" 
+                                         Background="#161B22" Foreground="#D29922" BorderBrush="#30363D"/>
+                            <Grid Margin="0,2,0,0">
+                                <TextBlock Text="0 mm (TDC)" FontSize="10" Foreground="#6E7681"/>
+                                <TextBlock Text="50 mm (BDC)" FontSize="10" Foreground="#6E7681" HorizontalAlignment="Right"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Hardware Limit Switches & Discrete I/O -->
+                    <Border Style="{StaticResource PanelCard}">
+                        <StackPanel Orientation="Vertical">
+                            <TextBlock Text="DISCRETE SENSORS &amp; INTERLOCKS" Style="{StaticResource HeaderLabel}"/>
+                            
+                            <!-- Optical Feed Sensor -->
+                            <Grid Margin="0,4">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Ellipse>
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse" BasedOn="{StaticResource IndicatorDot}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding FeedSensorActive}" Value="True">
+                                                        <Setter Property="Fill" Value="#3FB950"/>
+                                                        <Setter Property="Stroke" Value="#56D364"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                    <TextBlock Text="Optical Feed Sensor (Paper Present)" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Clamp Engaged -->
+                            <Grid Margin="0,4">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Ellipse>
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse" BasedOn="{StaticResource IndicatorDot}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding ClampEngaged}" Value="True">
+                                                        <Setter Property="Fill" Value="#D29922"/>
+                                                        <Setter Property="Stroke" Value="#E3B341"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                    <TextBlock Text="Pneumatic Clamp Engaged" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Clamp Limit Switch -->
+                            <Grid Margin="0,4">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Ellipse>
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse" BasedOn="{StaticResource IndicatorDot}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding ClampSwitchActive}" Value="True">
+                                                        <Setter Property="Fill" Value="#3FB950"/>
+                                                        <Setter Property="Stroke" Value="#56D364"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                    <TextBlock Text="Clamp Closed Limit Switch" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Blade TDC Switch -->
+                            <Grid Margin="0,4">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Ellipse>
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse" BasedOn="{StaticResource IndicatorDot}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding BladeTdcActive}" Value="True">
+                                                        <Setter Property="Fill" Value="#3FB950"/>
+                                                        <Setter Property="Stroke" Value="#56D364"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                    <TextBlock Text="Blade TDC (Top Dead Center)" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Blade BDC Switch -->
+                            <Grid Margin="0,4">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Ellipse>
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse" BasedOn="{StaticResource IndicatorDot}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding BladeBdcActive}" Value="True">
+                                                        <Setter Property="Fill" Value="#F85149"/>
+                                                        <Setter Property="Stroke" Value="#FF7B72"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                    <TextBlock Text="Blade BDC (Bottom Dead Center)" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- CENTER COLUMN: Job Recipe & Execution Progress -->
+            <Border Grid.Column="1" Style="{StaticResource PanelCard}" Margin="6,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="JOB RECIPE &amp; CYCLE EXECUTION" Style="{StaticResource HeaderLabel}"/>
+
+                    <!-- Job Progress Banner -->
+                    <Grid Grid.Row="1" Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding CurrentCutIndex, StringFormat='Active Cut: {0}'}" 
+                                   FontWeight="Bold" Foreground="#FFF" Margin="0,0,12,0"/>
+                        <ProgressBar Grid.Column="1" Value="{Binding JobProgress}" Minimum="0" Maximum="100" Height="14" 
+                                     Background="#161B22" Foreground="#2EA043" BorderBrush="#30363D"/>
+                        <TextBlock Grid.Column="2" Text="{Binding JobProgress, StringFormat='{}{0:F0}%'}" 
+                                   FontWeight="Bold" Foreground="#7EE787" Margin="10,0,0,0"/>
+                    </Grid>
+
+                    <!-- Cut Table DataGrid -->
+                    <DataGrid Grid.Row="2" ItemsSource="{Binding Cuts}" AutoGenerateColumns="False" 
+                              CanUserAddRows="False" Background="#161B22" RowBackground="#1C2128"
+                              AlternatingRowBackground="#22272E" Foreground="#E6EDF3" BorderBrush="#30363D"
+                              GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#30363D">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="50" IsReadOnly="True"/>
+                            <DataGridTextColumn Header="Position (mm)" Binding="{Binding PositionMm, StringFormat='{}{0:F2}'}" Width="140"/>
+                            <DataGridTextColumn Header="Steps (0.01 mm)" Binding="{Binding PositionUnits}" Width="130" IsReadOnly="True"/>
+                            <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="*" IsReadOnly="True"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <!-- Recipe Editing Bar -->
+                    <Grid Grid.Row="3" Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <TextBlock Grid.Column="0" Text="New Cut (mm):" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="#8B949E"/>
+                        <TextBox Grid.Column="1" Text="{Binding NewCutPositionMm}" Height="26" VerticalAlignment="Center" 
+                                 Background="#161B22" Foreground="#FFF" BorderBrush="#444" Padding="4,2"/>
+                        <Button Grid.Column="2" Content="+ Add Cut" Command="{Binding AddCutCommand}" Style="{StaticResource ActionBtn}"/>
+                        <Button Grid.Column="4" Content="Clear Recipe" Command="{Binding ClearCutsCommand}" Style="{StaticResource ActionBtn}"/>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <!-- RIGHT COLUMN: Machine Operations & E-STOP -->
+            <Border Grid.Column="2" Style="{StaticResource PanelCard}" Margin="6,0,0,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="OPERATOR CONTROLS" Style="{StaticResource HeaderLabel}"/>
+
+                    <!-- Standard Operator Actions -->
+                    <StackPanel Grid.Row="1" Orientation="Vertical" VerticalAlignment="Top">
+                        <Button Content="1. LOAD RECIPE" Command="{Binding LoadJobCommand}" 
+                                IsEnabled="{Binding CanLoadJob}" Style="{StaticResource ActionBtn}" Height="38" Margin="0,4"/>
+                        <Button Content="2. START CYCLE" Command="{Binding StartJobCommand}" 
+                                IsEnabled="{Binding CanStartJob}" Style="{StaticResource ActionBtn}" 
+                                Background="#238636" BorderBrush="#2EA043" Height="42" FontSize="14" Margin="0,4"/>
+                        <Button Content="PAUSE / RESUME" Command="{Binding PauseResumeCommand}" 
+                                IsEnabled="{Binding IsConnected}" Style="{StaticResource ActionBtn}" 
+                                Background="#9E6A03" BorderBrush="#D29922" Height="36" Margin="0,4"/>
+                        <Button Content="ABORT JOB" Command="{Binding AbortCommand}" 
+                                IsEnabled="{Binding IsConnected}" Style="{StaticResource ActionBtn}" 
+                                Background="#8B1A10" BorderBrush="#DA3633" Height="36" Margin="0,4"/>
+                        <Button Content="RESET FAULT" Command="{Binding ResetFaultCommand}" 
+                                IsEnabled="{Binding IsConnected}" Style="{StaticResource ActionBtn}" 
+                                Background="#1F6FEB" BorderBrush="#388BFD" Height="36" Margin="0,4"/>
+                    </StackPanel>
+
+                    <!-- GIANT HARDWARE EMERGENCY STOP (ALWAYS ENABLED) -->
+                    <StackPanel Grid.Row="2" Orientation="Vertical" Margin="0,16,0,0">
+                        <TextBlock Text="SAFETY INTERLOCK" HorizontalAlignment="Center" FontWeight="Bold" FontSize="11" Foreground="#FF7B72" Margin="0,0,0,4"/>
+                        <Button Command="{Binding EstopCommand}" Height="130"
+                                Background="#DA3633" BorderBrush="#FFA198" BorderThickness="3" Cursor="Hand">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="10"/>
+                                </Style>
+                            </Button.Resources>
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock Text="EMERGENCY" FontSize="22" FontWeight="Black" Foreground="#FFFFFF" HorizontalAlignment="Center"/>
+                                <TextBlock Text="STOP" FontSize="36" FontWeight="Black" Foreground="#FFFFFF" HorizontalAlignment="Center" Margin="0,-4,0,0"/>
+                                <TextBlock Text="[ HARDWARE INTERRUPT ]" FontSize="10" FontWeight="SemiBold" Foreground="#FFCCD2" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- ROW 3: System Event & Communication Log -->
+        <Border Grid.Row="3" Style="{StaticResource PanelCard}" Margin="0,8,0,0" Padding="8">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <Grid Grid.Row="0" Margin="0,0,0,4">
+                    <TextBlock Text="SYSTEM &amp; PACKET LOG" FontSize="11" FontWeight="Bold" Foreground="#8B949E"/>
+                    <TextBlock Text="Live Telemetry &amp; Protocol Trace" FontSize="10" Foreground="#6E7681" HorizontalAlignment="Right"/>
+                </Grid>
+
+                <ListBox Grid.Row="1" ItemsSource="{Binding EventLogs}" Background="#161B22" Foreground="#8B949E" 
+                         FontFamily="Consolas" FontSize="11" BorderBrush="#30363D"/>
+            </Grid>
+        </Border>
+
     </Grid>
 </Window>
