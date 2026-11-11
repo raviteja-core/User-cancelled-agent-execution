@@ -76,7 +76,9 @@ void action_estop_fault(MachineContext& ctx) noexcept {
     ctx.clamp_actuating = false;
     ctx.blade_moving = false;
     ctx.motors_halted = true;
-    ctx.latched_fault = protocol::FaultCode::ESTOP;
+    if (ctx.latched_fault == protocol::FaultCode::NONE) {
+        ctx.latched_fault = protocol::FaultCode::ESTOP;
+    }
 }
 
 void action_comm_fault(MachineContext& ctx) noexcept {

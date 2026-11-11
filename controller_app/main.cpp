@@ -4,6 +4,7 @@
 #include "core/fsm/state_machine.hpp"
 #include "core/motion/planner.hpp"
 #include "core/sim/sim_hardware.hpp"
+#include "core/safety/safety.hpp"
 #include "transport_serial_win.hpp"
 #include "transport_tcp.hpp"
 
@@ -96,6 +97,7 @@ int main(int argc, char* argv[]) {
     BladePlanner blade;
     SimulatedHardware sim;
     PacketParser parser;
+    safety::SafetySupervisor safety;
 
     Packet rx_packet;
     uint8_t rx_buf[256];
@@ -128,16 +130,12 @@ int main(int argc, char* argv[]) {
         // 2. Tick parser timeout
         parser.tick(1);
 
-        // 3. Heartbeat watchdog (once connected, must arrive within 200 ms)
-        if (client_connected && !ignore_heartbeats) {
-            heartbeat_watchdog_ms += 1;
-            if (heartbeat_watchdog_ms >= 200) {
-                if (fsm.state() != State::ERROR_FAULT && fsm.state() != State::ERROR_JAM) {
-                    fsm.handle_event(Event::HEARTBEAT_TIMEOUT);
-                    back_gauge.emergency_stop();
-                    blade.emergency_stop();
-                }
-            }
+        // 3. Safety Supervisor (heartbeat watchdog, interlocks, CRC storm, motion overrun)
+        if (!ignore_heartbeats) {
+            safety.tick_1ms(fsm, back_gauge, blade, parser.crc_errors(), client_connected);
+        } else if (client_connected) {
+            // Heartbeats ignored: watchdog will trip
+            safety.tick_1ms(fsm, back_gauge, blade, parser.crc_errors(), true);
         }
 
         // 4. 20 Hz Telemetry broadcast (every 50 ms)
@@ -172,9 +170,8 @@ int main(int argc, char* argv[]) {
                     }
 
                     // Reset heartbeat watchdog on valid command
-                    if (rx_packet.cmd == static_cast<uint8_t>(Command::HEARTBEAT) ||
-                        rx_packet.cmd == static_cast<uint8_t>(Command::HELLO)) {
-                        heartbeat_watchdog_ms = 0;
+                    if (!ignore_heartbeats) {
+                        safety.pet_watchdog();
                     }
 
                     size_t tx_size = 0;

@@ -5,6 +5,7 @@ add_library(papercutter_core STATIC
     src/fsm/state_machine.cpp
     src/motion/planner.cpp
     src/sim/sim_hardware.cpp
+    src/safety/safety.cpp
 )
 
 target_include_directories(papercutter_core PUBLIC

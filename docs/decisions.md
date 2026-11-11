@@ -48,6 +48,16 @@ This document records architectural, safety, and implementation decisions made i
 - **Context**: Section 1.4 requires telemetry sent at 20 Hz (50 ms). Section 1.7 requires modeling back-gauge, blade limit switches (TDC/BDC), feed sensor, clamp delay, and fault injection.
 - **Decision**: `SimulatedHardware` models a 150 ms clamp travel delay before the confirm switch closes, optical paper feed sensor activation, and limit switches for TDC and BDC. The controller tick loop generates and transmits `CMD 0x30` every 50 ticks (50 ms / 20 Hz) containing live position, switch states, fault latch, and error counters.
 
+## Decision 009: Centralized Safety Supervisor & Interlocks
+- **Context**: Rule 6 requires faults to halt motion within one 1 ms tick and latch safely. Section 1.4 requires watchdog (200 ms timeout), CRC storm, and motion boundary overrun protections.
+- **Decision**: `SafetySupervisor` runs every 1 ms tick. It checks:
+  1. E-stop assertion: immediately triggers emergency deceleration on back gauge and blade.
+  2. Heartbeat watchdog: if > 200 ms without communication once connected, trips `FaultCode::COMM_TIMEOUT`.
+  3. CRC Storm detection: if >= 5 CRC errors occur within 100 ms, trips `FaultCode::CRC_STORM`.
+  4. Motion overrun: if position exceeds [0, 100000] steps (0..1000 mm), trips `FaultCode::MOTION_OVERRUN`.
+  5. Premature limit switch: if TDC switch clears when not in `CUTTING`, trips `FaultCode::PREMATURE_LIMIT`.
+
+
 
 
 
