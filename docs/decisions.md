@@ -39,4 +39,10 @@ This document records architectural, safety, and implementation decisions made i
 - **Decision**: Transitions are stored in a contiguous `constexpr` array `TRANSITION_TABLE`. Multiple rows with the same `(from_state, event)` are supported for branching based on guards (e.g. `guard_cut_complete_next` vs `guard_cut_complete_done`). If any guard succeeds, the transition executes; if an event is recognized in the current state but no guard passes, `GUARD_FAILED` is returned. If the event is unrecognized for that state, `ILLEGAL_TRANSITION` is returned to trigger a NACK with precise error telemetry.
 - **Fault Latching**: Any error state (`ERROR_JAM`, `ERROR_FAULT`) immediately asserts `motors_halted = true` within the current tick and latches `latched_fault`. Only `RESET_FAULT` with verified safe physical inputs can clear the fault latch.
 
+## Decision 007: Trapezoidal Motion Profile & Discrete Stopping Distance
+- **Context**: Section 1.6 requires trapezoidal velocity profile for back-gauge and cyclic blade profile with integer/fixed-point arithmetic in 1 ms tick and emergency deceleration stopping distance calculation.
+- **Decision**: In discrete 1 ms time increments, stopping distance required from velocity $v$ at acceleration $a$ ($dv = a / 1000$) is computed as $s_{stop}(v) = \frac{v (v + dv)}{2a}$. When remaining distance $\le s_{stop}(v)$, the planner transitions to deceleration, stepping down velocity by exactly $dv$ per tick to arrive at target with $v=0$ without velocity discontinuity or position overshoot.
+- **Emergency Stopping**: On fault or E-stop, the planner switches to emergency deceleration rate $a_{emerg}$, records distance from trigger to full stop, and never allows step inversion.
+
+
 
