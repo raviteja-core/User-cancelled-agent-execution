@@ -26,3 +26,11 @@ This document records architectural, safety, and implementation decisions made i
   - `READ_CRC2`: read second byte of CRC (LSB), verify CRC over LEN + BODY.
   On bad CRC or invalid length, increment `crc_errors` or `dropped_packets`, reset parser to `WAIT_SOF1`.
   50 ms inter-byte timeout is handled via `tick(delta_ms)`: if timed out while reading a packet, reset and increment `timeout_counter`.
+
+## Decision 005: Transport Abstraction Hierarchy & Dual Mode Support
+- **Context**: The controller must run on Windows with com0com (COM10/COM11), TCP for CI / loopback, and in-memory for unit tests.
+- **Decision**: `ITransport` defines non-blocking `read()`, `write()`, `is_open()`, and `close()`.
+  - `WinSerialTransport` uses Win32 `CreateFileW`, `SetCommState`, `SetCommTimeouts` with zero OS headers in `core/`.
+  - `TcpTransport` provides loopback TCP socket connection for automated CI testing and cross-process verification.
+  - `MemoryTransport` provides an in-memory paired FIFO ring buffer for deterministic unit testing.
+

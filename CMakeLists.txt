@@ -12,6 +12,7 @@ else()
 endif()
 
 add_subdirectory(core)
+add_subdirectory(controller_app)
 
 enable_testing()
 add_subdirectory(tests/cpp)

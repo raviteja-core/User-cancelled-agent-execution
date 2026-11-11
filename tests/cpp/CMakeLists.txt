@@ -9,6 +9,12 @@ FetchContent_MakeAvailable(googletest)
 add_executable(unit_tests
     test_crc16.cpp
     test_protocol.cpp
+    test_transport.cpp
+    ../../controller_app/transport_mem.cpp
+)
+
+target_include_directories(unit_tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../controller_app
 )
 
 target_link_libraries(unit_tests PRIVATE
