@@ -44,5 +44,10 @@ This document records architectural, safety, and implementation decisions made i
 - **Decision**: In discrete 1 ms time increments, stopping distance required from velocity $v$ at acceleration $a$ ($dv = a / 1000$) is computed as $s_{stop}(v) = \frac{v (v + dv)}{2a}$. When remaining distance $\le s_{stop}(v)$, the planner transitions to deceleration, stepping down velocity by exactly $dv$ per tick to arrive at target with $v=0$ without velocity discontinuity or position overshoot.
 - **Emergency Stopping**: On fault or E-stop, the planner switches to emergency deceleration rate $a_{emerg}$, records distance from trigger to full stop, and never allows step inversion.
 
+## Decision 008: Hardware Simulation & 20 Hz Telemetry Broadcast
+- **Context**: Section 1.4 requires telemetry sent at 20 Hz (50 ms). Section 1.7 requires modeling back-gauge, blade limit switches (TDC/BDC), feed sensor, clamp delay, and fault injection.
+- **Decision**: `SimulatedHardware` models a 150 ms clamp travel delay before the confirm switch closes, optical paper feed sensor activation, and limit switches for TDC and BDC. The controller tick loop generates and transmits `CMD 0x30` every 50 ticks (50 ms / 20 Hz) containing live position, switch states, fault latch, and error counters.
+
+
 
 

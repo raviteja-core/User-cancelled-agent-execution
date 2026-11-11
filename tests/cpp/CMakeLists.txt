@@ -12,6 +12,7 @@ add_executable(unit_tests
     test_transport.cpp
     test_fsm.cpp
     test_motion.cpp
+    test_sim.cpp
     ../../controller_app/transport_mem.cpp
 )
 
