@@ -1,0 +1,129 @@
+{
+  "standard_check": {
+    "input_hex": "313233343536373839",
+    "expected_crc": "0x29B1",
+    "expected_crc_int": 10673
+  },
+  "packets": [
+    {
+      "name": "HELLO",
+      "seq": 1,
+      "cmd": 1,
+      "cmd_hex": "0x01",
+      "payload_hex": "010064",
+      "wire_hex": "aa550501010100648ae6",
+      "expected_crc": "0x8AE6",
+      "expected_crc_int": 35558
+    },
+    {
+      "name": "HEARTBEAT",
+      "seq": 2,
+      "cmd": 2,
+      "cmd_hex": "0x02",
+      "payload_hex": "",
+      "wire_hex": "aa55020202e4dc",
+      "expected_crc": "0xE4DC",
+      "expected_crc_int": 58588
+    },
+    {
+      "name": "LOAD_JOB",
+      "seq": 3,
+      "cmd": 16,
+      "cmd_hex": "0x10",
+      "payload_hex": "002a030000271000004e2000007530",
+      "wire_hex": "aa55110310002a030000271000004e20000075304f7b",
+      "expected_crc": "0x4F7B",
+      "expected_crc_int": 20347
+    },
+    {
+      "name": "START",
+      "seq": 4,
+      "cmd": 17,
+      "cmd_hex": "0x11",
+      "payload_hex": "002a",
+      "wire_hex": "aa55040411002aa380",
+      "expected_crc": "0xA380",
+      "expected_crc_int": 41856
+    },
+    {
+      "name": "PAUSE",
+      "seq": 5,
+      "cmd": 18,
+      "cmd_hex": "0x12",
+      "payload_hex": "",
+      "wire_hex": "aa550205126f7a",
+      "expected_crc": "0x6F7A",
+      "expected_crc_int": 28538
+    },
+    {
+      "name": "ABORT",
+      "seq": 6,
+      "cmd": 19,
+      "cmd_hex": "0x13",
+      "payload_hex": "",
+      "wire_hex": "aa550206132a08",
+      "expected_crc": "0x2A08",
+      "expected_crc_int": 10760
+    },
+    {
+      "name": "ESTOP",
+      "seq": 7,
+      "cmd": 32,
+      "cmd_hex": "0x20",
+      "payload_hex": "",
+      "wire_hex": "aa550207201f09",
+      "expected_crc": "0x1F09",
+      "expected_crc_int": 7945
+    },
+    {
+      "name": "RESET_FAULT",
+      "seq": 8,
+      "cmd": 33,
+      "cmd_hex": "0x21",
+      "payload_hex": "",
+      "wire_hex": "aa550208211f16",
+      "expected_crc": "0x1F16",
+      "expected_crc_int": 7958
+    },
+    {
+      "name": "TELEMETRY",
+      "seq": 9,
+      "cmd": 48,
+      "cmd_hex": "0x30",
+      "payload_hex": "01000000003a9800000000010101000000000000000000",
+      "wire_hex": "aa5519093001000000003a9800000000010101000000000000000000fe1c",
+      "expected_crc": "0xFE1C",
+      "expected_crc_int": 65052
+    },
+    {
+      "name": "ACK",
+      "seq": 10,
+      "cmd": 126,
+      "cmd_hex": "0x7E",
+      "payload_hex": "0300",
+      "wire_hex": "aa55040a7e030066fb",
+      "expected_crc": "0x66FB",
+      "expected_crc_int": 26363
+    },
+    {
+      "name": "NACK",
+      "seq": 11,
+      "cmd": 127,
+      "cmd_hex": "0x7F",
+      "payload_hex": "0301",
+      "wire_hex": "aa55040b7f0301375e",
+      "expected_crc": "0x375E",
+      "expected_crc_int": 14174
+    },
+    {
+      "name": "SIM_INJECT",
+      "seq": 12,
+      "cmd": 144,
+      "cmd_hex": "0x90",
+      "payload_hex": "010bb8",
+      "wire_hex": "aa55050c90010bb8cdbc",
+      "expected_crc": "0xCDBC",
+      "expected_crc_int": 52668
+    }
+  ]
+}

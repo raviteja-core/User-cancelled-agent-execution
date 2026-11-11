@@ -1,0 +1,25 @@
+# Visual Studio / CMake
+build/
+bin/
+obj/
+out/
+.vs/
+*.user
+*.suo
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+test_report.xml
+junit.xml
+
+# .NET / C#
+*.DotSettings.user
+[Bb]in/
+[Oo]bj/
+*.nuget.props
+*.nuget.targets
+project.lock.json
+project.assets.json
