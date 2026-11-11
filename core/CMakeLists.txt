@@ -2,6 +2,7 @@ add_library(papercutter_core STATIC
     src/protocol/crc16.cpp
     src/protocol/encoder.cpp
     src/protocol/parser.cpp
+    src/fsm/state_machine.cpp
 )
 
 target_include_directories(papercutter_core PUBLIC

@@ -10,6 +10,7 @@ add_executable(unit_tests
     test_crc16.cpp
     test_protocol.cpp
     test_transport.cpp
+    test_fsm.cpp
     ../../controller_app/transport_mem.cpp
 )
 

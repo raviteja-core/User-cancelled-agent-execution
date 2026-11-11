@@ -34,3 +34,9 @@ This document records architectural, safety, and implementation decisions made i
   - `TcpTransport` provides loopback TCP socket connection for automated CI testing and cross-process verification.
   - `MemoryTransport` provides an in-memory paired FIFO ring buffer for deterministic unit testing.
 
+## Decision 006: Table-Driven Finite State Machine & Guard Branching
+- **Context**: Rule 6 requires table-driven state machine, rejecting illegal transitions with NACK, and latching faults.
+- **Decision**: Transitions are stored in a contiguous `constexpr` array `TRANSITION_TABLE`. Multiple rows with the same `(from_state, event)` are supported for branching based on guards (e.g. `guard_cut_complete_next` vs `guard_cut_complete_done`). If any guard succeeds, the transition executes; if an event is recognized in the current state but no guard passes, `GUARD_FAILED` is returned. If the event is unrecognized for that state, `ILLEGAL_TRANSITION` is returned to trigger a NACK with precise error telemetry.
+- **Fault Latching**: Any error state (`ERROR_JAM`, `ERROR_FAULT`) immediately asserts `motors_halted = true` within the current tick and latches `latched_fault`. Only `RESET_FAULT` with verified safe physical inputs can clear the fault latch.
+
+
